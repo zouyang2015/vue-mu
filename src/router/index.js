@@ -10,11 +10,14 @@ import Rank from 'components/rank/rank'
 // 搜索页面
 import Search from 'components/search/search'
 
-
 Vue.use(Router)
 
 export default new Router({
   routes: [
+    {
+      path: '/',
+      redirect: '/recommend'
+    },
     {
       path: '/recommend',
       component: Recommend
@@ -28,8 +31,8 @@ export default new Router({
       component: Rank
     },
     {
-      path: '/Search',
-      component: search
+      path: '/search',
+      component: Search
     }
   ]
 })
