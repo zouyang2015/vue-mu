@@ -32,7 +32,7 @@
       .tab-link
         padding-bottom: 5px
         color: $color-text-l
-      &.router-link-active
+      &.router-link-active  /* 当router-link被点击时会在其上添加一个class */
         .tab-link
           color: $color-theme
           border-bottom: 2px solid $color-theme

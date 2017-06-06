@@ -8,7 +8,7 @@ export default function jsonp(url, data, option) {
       if (!err) {
         resolve(data)
       } else {
-        reject(err)
+        reject(data)
       }
     })
   })
@@ -16,7 +16,7 @@ export default function jsonp(url, data, option) {
 
 function param(data) {
   let url = ''
-  for (let key in data) {
+  for (var key in data) {
     let value = data[key] !== undefined ? data[key] : ''
     url += `&${key}=${encodeURIComponent(value)}`
   }
