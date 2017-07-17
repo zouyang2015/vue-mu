@@ -44,16 +44,16 @@
         if (this.autoPlay) {
           this._goToPlay()
         }
+
+        window.addEventListener('resize', () => {
+          if (!this.slider) {
+            return
+          }
+
+          this._setSliderWidth(true)
+          this.slider.refresh()
+        })
       }, 20)
-
-      window.addEventListener('resize', () => {
-        if (!this.slider) {
-          return
-        }
-
-        this._setSliderWidth(true)
-        this.slider.refresh()
-      })
     },
     methods: {
       _setSliderWidth(isResize) {
@@ -116,6 +116,9 @@
           this.slider.goToPage(pageIndex, 0, 400)
         }, this.interval)
       }
+    },
+    destroyed() {
+      window.clearTimeout(this.timer)
     }
   }
 </script>
