@@ -20,6 +20,10 @@
       data: {
         type: Array,
         default: null
+      },
+      listenScroll: {
+        type: Boolean,
+        default: false
       }
     },
     mounted() {
@@ -32,19 +36,33 @@
         if (!this.$refs.wrapper) {
           return
         }
-        this.Scroll = new BScorll(this.$refs.wrapper, {
+        this.scroll = new BScorll(this.$refs.wrapper, {
           probeType: this.probeType,
           click: this.click
         })
+
+        if (this.listenScroll) {
+          let me = this
+          this.scroll.on('scroll', (pos) => {
+            // BScorll里的this是指上BScorll的，所以这里要用me来保存vue的实例
+            me.$emit('scroll', pos)
+          })
+        }
       },
       enable() {
-        this.Scroll && this.Scroll.enable()
+        this.scroll && this.scroll.enable()
       },
       disable() {
-        this.Scroll && this.Scroll.disable()
+        this.scroll && this.scroll.disable()
       },
       refresh() {
-        this.Scroll && this.Scroll.refresh()
+        this.scroll && this.scroll.refresh()
+      },
+      scrollTo() {
+        this.scroll && this.scroll.scrollTo.apply(this.scroll, arguments)
+      },
+      scrollToElement() {
+        this.scroll && this.scroll.scrollToElement.apply(this.scroll, arguments)
       }
     },
     watch: {
