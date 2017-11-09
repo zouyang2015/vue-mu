@@ -1,6 +1,6 @@
 <template>
   <transition name="slide">
-    <music-list :songs="songs" :title="title" :bg-image="bgImage"></music-list>
+    <music-list :bg-image="bgImage" :songs="songs" :title="title"></music-list>
   </transition>
 </template>
 
@@ -41,7 +41,6 @@
         getSingerDetail(this.singer.id).then((res) => {
           if (res.code === ERR_OK) {
             this.songs = this._normalizeSongs(res.data.list)
-            console.log(this.songs)
           }
         })
       },
