@@ -1,23 +1,196 @@
 <template>
   <div v-show="playList.length" class="player">
     <!-- 展开的播放器 -->
-    <div class="mormal-player" v-show="fullScreen">
-      播放器
-    </div>
+    <!-- JavaScript钩子 -->
+    <!-- <transition
+      v-on:before-enter="beforeEnter"
+      v-on:enter="enter"
+      v-on:after-enter="afterEnter"
+      v-on:enter-cancelled="enterCancelled"
+      v-on:before-leave="beforeLeave"
+      v-on:leave="leave"
+      v-on:after-leave="afterLeave"
+      v-on:leave-cancelled="leaveCancelled"
+    >
+    </transition> -->
+    <transition name="normal"
+                @enter="enter"
+                @after-enter="afterEnter"
+                @leave="leave"
+                @after-leave="afterLeave"
+
+    >
+      <div class="normal-player" v-show="fullScreen">
+        <div class="background">
+          <img width="100%" height="100%" :src="currentSong.image">
+        </div>
+        <div class="top">
+          <div class="back" @click="back">
+            <i class="icon-back"></i>
+          </div>
+          <h1 class="title" v-html="currentSong.name"></h1>
+          <h2 class="subtitle" v-html="currentSong.singer"></h2>
+        </div>
+        <div class="middle">
+          <div class="middle-l">
+            <div class="cd-wrapper" ref="cdWrapper">
+              <div class="cd">
+                <img class="image" :src="currentSong.image">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bottom">
+          <div class="operators">
+            <div class="icon i-left">
+              <i class="icon-sequence"></i>
+            </div>
+            <div class="icon i-left">
+              <i class="icon-prev"></i>
+            </div>
+            <div class="icon i-center">
+              <i class="icon-play" @click="toggerPlaying"></i>
+            </div>
+            <div class="icon i-right">
+              <i class="icon-next"></i>
+            </div>
+            <div class="icon i-right">
+              <i class="icon icon-not-favorite"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+    </transition>
+
     <!-- 收起后的播放器 -->
-    <div class="mini-player" v-show="!fullScreen"></div>
+    <transition name="mini">
+      <div class="mini-player" v-show="!fullScreen" @click="open">
+        <div class="icon">
+          <div class="imgWrapper">
+            <img width="40" height="40" :src="currentSong.image">
+          </div>
+        </div>
+        <div class="text">
+          <h2 class="name" v-html="currentSong.name"></h2>
+          <p class="desc" v-html="currentSong.singer"></p>
+        </div>
+        <div class="control"></div>
+        <div class="control">
+          <i class="icon-playlist"></i>
+        </div>
+      </div>
+    </transition>
+
+    <audio :src="currentSong.url" ref="audio"></audio>
   </div>
 </template>
 
 <script type="text/ecmascript-6">
-  import {mapGetters} from 'vuex'
+  import {mapGetters, mapMutations} from 'vuex'
+  import animations from 'create-keyframe-animation'
+  import {prefixStyle} from 'common/js/dom'
+
+  const transform = prefixStyle('transform')
 
   export default {
     computed: {
+      playIcon() {
+        return this.playing ? 'icon-pause' : 'icon-play'
+      },
       ...mapGetters([
         'fullScreen',
-        'playList'
+        'playList',
+        'currentSong',
+        'playing'
       ])
+    },
+    methods: {
+      // 打开关闭
+      back() {
+        this.setFullScreen(false)
+      },
+      open() {
+        this.setFullScreen(true)
+      },
+      // 动画
+      enter(el, done) {
+        // done为回调函数，done执行时跳到下一个执行函数中，也就是afterEnter
+        const {x, y, scale} = this._getPosAndScale()
+
+        let animation = {
+          0: {
+            transform: `transLate3d(${x}px, ${y}px, 0) scale(${scale})`
+          },
+          60: {
+            transform: `transLate3d(0, 0, 0) scale(1.1)`
+          },
+          100: {
+            transform: `transLate3d(0, 0, 0) scale(1)`
+          }
+        }
+
+        animations.registerAnimation({
+          name: 'move',
+          animation,
+          presets: {
+            duration: 400,
+            easing: 'linear'
+          }
+        })
+
+        animations.runAnimation(this.$refs.cdWrapper, 'move', done)
+      },
+      afterEnter(el) {
+        animations.unregisterAnimation('move')
+        this.$refs.cdWrapper.style.animation = ''
+      },
+      leave(el, done) {
+        // done为回调函数，done执行时跳到下一个执行函数中，也就是afterLeave
+        this.$refs.cdWrapper.style.transition = 'all 0.4s'
+        const {x, y, scale} = this._getPosAndScale()
+        this.$refs.cdWrapper.style[transform] = `transLate3d(${x}px, ${y}px, 0) scale(${scale})`
+        this.$refs.cdWrapper.addEventListener('transitionend', done)
+      },
+      afterLeave(el) {
+        this.$refs.cdWrapper.style.transition = ''
+        this.$refs.cdWrapper.style[transform] = ''
+      },
+      // 播放控制
+      toggerPlaying() {
+        this.setPlayingState(!this.playing)
+      },
+      // 计算动画距离和缩放
+      _getPosAndScale() {
+        // 小-大
+        const targetWidth = 40  // 小图标的宽
+        const paddingLeft = 40  // 小图标的左偏移
+        const paddingBottom = 30  // 小图标底部的偏移
+        const paddingTop = 80  // 大图标顶部的偏移
+        const width = window.innerWidth * 0.8  // 大图标的宽度
+        const scale = targetWidth / width  // 初始缩放比例
+        const x = -(window.innerWidth / 2 - paddingLeft)
+        const y = window.innerHeight - paddingBottom - paddingTop - width / 2
+        return {
+          x, y, scale
+        }
+      },
+      ...mapMutations({
+        'setFullScreen': 'SET_FULL_SCREEN',
+        'setPlayingState': 'SET_PLAYING_STATE'
+      })
+    },
+    watch: {
+      currentSong() {
+        this.$nextTick(() => {
+          this.$refs.audio.play()
+        })
+      },
+      playing(newPlaying) {
+        const audio = this.$refs.audio
+        this.$nextTick(() => {
+          newPlaying ? audio.play() : audio.pause()
+        })
+      }
     }
   }
 </script>
@@ -262,6 +435,7 @@
           position: absolute
           left: 0
           top: 0
+
   @keyframes rotate
     0%
       transform: rotate(0)
