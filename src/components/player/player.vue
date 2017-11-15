@@ -34,25 +34,32 @@
         <div class="middle">
           <div class="middle-l">
             <div class="cd-wrapper" ref="cdWrapper">
-              <div class="cd">
-                <img class="image" :src="currentSong.image">
+              <div class="cd" :class="cdCls">
+                <img :src="currentSong.image" class="image">
               </div>
             </div>
           </div>
         </div>
         <div class="bottom">
+          <div class="progress-wrapper">
+            <span class="time time-l">{{format(currentTime)}}</span>
+            <div class="progress-bar-wrapper">
+              <progress-bar :percent="percent" @percentChange="onProgressBarChange"></progress-bar>
+            </div>
+            <span class="time time-r">{{format(currentSong.duration)}}</span>
+          </div>
           <div class="operators">
             <div class="icon i-left">
               <i class="icon-sequence"></i>
             </div>
-            <div class="icon i-left">
-              <i class="icon-prev"></i>
+            <div class="icon i-left" :class="disableCls">
+              <i class="icon-prev" @click="prev"></i>
             </div>
-            <div class="icon i-center">
-              <i class="icon-play" @click="toggerPlaying"></i>
+            <div class="icon i-center" :class="disableCls">
+              <i @click="toggerPlaying" :class="playIcon"></i>
             </div>
-            <div class="icon i-right">
-              <i class="icon-next"></i>
+            <div class="icon i-right" :class="disableCls">
+              <i class="icon-next" @click="next"></i>
             </div>
             <div class="icon i-right">
               <i class="icon icon-not-favorite"></i>
@@ -67,21 +74,23 @@
       <div class="mini-player" v-show="!fullScreen" @click="open">
         <div class="icon">
           <div class="imgWrapper">
-            <img width="40" height="40" :src="currentSong.image">
+            <img width="40" height="40" :src="currentSong.image" :class="cdCls">
           </div>
         </div>
         <div class="text">
           <h2 class="name" v-html="currentSong.name"></h2>
           <p class="desc" v-html="currentSong.singer"></p>
         </div>
-        <div class="control"></div>
+        <div class="control">
+          <i @click.stop="toggerPlaying" :class="playIconMini"></i>
+        </div>
         <div class="control">
           <i class="icon-playlist"></i>
         </div>
       </div>
     </transition>
 
-    <audio :src="currentSong.url" ref="audio"></audio>
+    <audio :src="currentSong.url" ref="audio" @canplay="ready" @error="error" @timeupdate="updateTime"></audio>
   </div>
 </template>
 
@@ -89,19 +98,39 @@
   import {mapGetters, mapMutations} from 'vuex'
   import animations from 'create-keyframe-animation'
   import {prefixStyle} from 'common/js/dom'
+  import ProgressBar from 'base/progress-bar/progress-bar'
 
   const transform = prefixStyle('transform')
 
   export default {
+    data() {
+      return {
+        songReady: false,
+        currentTime: 0
+      }
+    },
     computed: {
+      cdCls() {
+        return this.playing ? 'play' : 'play pause'
+      },
       playIcon() {
         return this.playing ? 'icon-pause' : 'icon-play'
+      },
+      playIconMini() {
+        return this.playing ? 'icon-pause-mini' : 'icon-play-mini'
+      },
+      disableCls() {
+        return this.songReady ? '' : 'disable'
+      },
+      percent() {
+        return this.currentTime / this.currentSong.duration
       },
       ...mapGetters([
         'fullScreen',
         'playList',
         'currentSong',
-        'playing'
+        'playing',
+        'currentIndex'
       ])
     },
     methods: {
@@ -157,7 +186,71 @@
       },
       // 播放控制
       toggerPlaying() {
+        if (!this.songReady) {
+          return
+        }
         this.setPlayingState(!this.playing)
+      },
+      prev() {
+        if (!this.songReady) {
+          return
+        }
+        let index = this.currentIndex - 1
+        if (index === -1) {
+          index = this.playList.length - 1
+        }
+        this.setCurrentIndex(index)
+        if (!this.playing) {
+          this.toggerPlaying()
+        }
+        this.songReady = false
+      },
+      next() {
+        if (!this.songReady) {
+          return
+        }
+        let index = this.currentIndex + 1
+        if (index === this.playList.length) {
+          index = 0
+        }
+        this.setCurrentIndex(index)
+        if (!this.playing) {
+          this.toggerPlaying()
+        }
+        this.songReady = false
+      },
+      // audio上的事件
+      ready() {
+        this.songReady = true
+      },
+      error() {
+        this.songReady = true
+      },
+      updateTime(e) {
+        this.currentTime = e.target.currentTime
+      },
+      // 格式化audio的时间为分：秒(0:00)格式
+      format(interval) {
+        // 向下取整
+        interval = interval | 0
+        const minute = interval / 60 | 0
+        const second = this._pad(interval % 60)
+        return `${minute}:${second}`
+      },
+      _pad(num, n = 2) {
+        let len = num.toString().length
+        while (len < n) {
+          num = `0${num}`
+          len++
+        }
+        return num
+      },
+      // 子组件emit回来的precent
+      onProgressBarChange(percent) {
+        this.$refs.audio.currentTime = this.currentSong.duration * percent
+        if (!this.playing) {
+          this.toggerPlaying()
+        }
       },
       // 计算动画距离和缩放
       _getPosAndScale() {
@@ -175,8 +268,9 @@
         }
       },
       ...mapMutations({
-        'setFullScreen': 'SET_FULL_SCREEN',
-        'setPlayingState': 'SET_PLAYING_STATE'
+        setFullScreen: 'SET_FULL_SCREEN',
+        setPlayingState: 'SET_PLAYING_STATE',
+        setCurrentIndex: 'SET_CURRENT_INDEX'
       })
     },
     watch: {
@@ -191,6 +285,9 @@
           newPlaying ? audio.play() : audio.pause()
         })
       }
+    },
+    components: {
+      ProgressBar
     }
   }
 </script>
@@ -268,17 +365,19 @@
               width: 100%
               height: 100%
               border-radius: 50%
+              box-sizing: border-box
+              border: 10px solid rgba(255, 255, 255, 0.1)
+              &.play
+                animation: rotate 20s linear infinite
+              &.pause
+                animation-play-state: paused
               .image
                 position: absolute
                 left: 0
                 top: 0
                 width: 100%
                 height: 100%
-                box-sizing: border-box
                 border-radius: 50%
-                border: 10px solid rgba(255, 255, 255, 0.1)
-              .play
-                animation: rotate 20s linear infinite
           .playing-lyric-wrapper
             width: 80%
             margin: 30px auto 0 auto
@@ -334,7 +433,7 @@
           display: flex
           align-items: center
           width: 80%
-          margin: 0px auto
+          margin: 0 auto
           padding: 10px 0
           .time
             color: $color-text
