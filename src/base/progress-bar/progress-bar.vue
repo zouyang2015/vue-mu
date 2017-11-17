@@ -32,7 +32,6 @@
         this.touch.left = this.$refs.progress.clientWidth
       },
       progressTouchMove(e) {
-        console.log('move', e)
         if (!this.touch.initiated) {
           return
         }
@@ -41,13 +40,13 @@
         this._offset(offsetWidth)
       },
       progressTouchEnd(e) {
-        console.log('end', e)
         this.touch.initiated = false
         this._triggerPercent()
       },
       progressClick(e) {
-        console.log('click', e)
-        this._offset(e.offsetX)
+        const rect = this.$refs.progressBar.getBoundingClientRect()
+        const offsetWidth = e.pageX - rect.left
+        this._offset(offsetWidth)
         this._triggerPercent()
       },
       _offset(offsetWidth) {

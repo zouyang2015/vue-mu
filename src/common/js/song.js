@@ -1,3 +1,6 @@
+import {getLyric} from 'api/song'
+import {ERR_OK} from 'api/config'
+
 // 不设置成对像，设置成类有2大好处
 // 1.可以把代集中到一个地方去维护，不需要在多个地方去大量的写这种代码
 // 2.类的扩展性比对像要强很多，而且他是一种面向对象的编程方式
@@ -11,6 +14,15 @@ export default class Song {
     this.duration = duration
     this.image = image
     this.url = url
+  }
+
+  getLyric() {
+    getLyric(this.mid).then((res) => {
+      if (res.retcode === ERR_OK) {
+        this.lyric = res.lyric
+        console.log(this.lyric)
+      }
+    })
   }
 }
 
