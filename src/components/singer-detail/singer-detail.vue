@@ -50,6 +50,7 @@
           // 对象解构赋值
           let {musicData} = item
           if (musicData.songid && musicData.albummid) {
+            // musicData每一个都是一个Song的实例，createSong为一个工厂函数
             ret.push(createSong(musicData))
           }
         })

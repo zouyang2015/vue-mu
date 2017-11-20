@@ -1,5 +1,6 @@
 import {getLyric} from 'api/song'
 import {ERR_OK} from 'api/config'
+import {Base64} from 'js-base64'
 
 // 不设置成对像，设置成类有2大好处
 // 1.可以把代集中到一个地方去维护，不需要在多个地方去大量的写这种代码
@@ -17,11 +18,18 @@ export default class Song {
   }
 
   getLyric() {
-    getLyric(this.mid).then((res) => {
-      if (res.retcode === ERR_OK) {
-        this.lyric = res.lyric
-        console.log(this.lyric)
-      }
+    if (this.lyric) {
+      return Promise.resolve(this.lyric)
+    }
+    return new Promise((resolve, reject) => {
+      getLyric(this.mid).then((res) => {
+        if (res.retcode === ERR_OK) {
+          this.lyric = Base64.decode(res.lyric)
+          resolve(this.lyric)
+        } else {
+          reject('no lyric')
+        }
+      })
     })
   }
 }
