@@ -31,7 +31,11 @@
           <h1 class="title" v-html="currentSong.name"></h1>
           <h2 class="subtitle" v-html="currentSong.singer"></h2>
         </div>
-        <div class="middle">
+        <div class="middle"
+             @touchstart.prevent="middleTouchStart"
+             @touchmove.prevent="middleTouchMove"
+             @touchend="middleTouchEnd"
+        >
           <div class="middle-l">
             <div class="cd-wrapper" ref="cdWrapper">
               <div class="cd" :class="cdCls">
@@ -49,6 +53,10 @@
           </scroll>
         </div>
         <div class="bottom">
+          <div class="dot-wrapper">
+            <span class="dot" :class="{'active':currentShow === 'cd'}"></span>
+            <span class="dot" :class="{'active':currentShow === 'lyric'}"></span>
+          </div>
           <div class="progress-wrapper">
             <span class="time time-l">{{format(currentTime)}}</span>
             <div class="progress-bar-wrapper">
@@ -124,7 +132,8 @@
         currentTime: 0,
         radius: 32,
         currentLyric: null,
-        currentLineNum: 0 // 当前歌词所在的行
+        currentLineNum: 0, // 当前歌词所在的行
+        currentShow: 'cd'
       }
     },
     computed: {
@@ -155,6 +164,9 @@
         'mode',
         'sequenceList'
       ])
+    },
+    created() {
+      this.touch = {}
     },
     methods: {
       // 打开关闭
@@ -312,6 +324,31 @@
         } else {
           this.$refs.lyricList.scrollTo(0, 0, 1000)
         }
+      },
+      middleTouchStart(e) {
+        this.touch.initiated = true
+        const touches = e.touches[0]
+        this.touch.startX = touches.pageX
+        this.touch.startY = touches.pageY
+      },
+      middleTouchMove(e) {
+        if (!this.touch.initiated) {
+          return
+        }
+        const touches = e.touches[0]
+        const deltaX = touches.pageX - this.touch.startX
+        const deltaY = touches.pageY - this.touch.startY
+        if (Math.abs(deltaY) > Math.abs(deltaX)) {
+          return
+        }
+        // left为右侧lyric距离右侧的位置
+        const left = this.currentShow === 'cd' ? 0 : -window.innerWidth
+        // width为右侧lyric距离屏幕右侧的宽度
+        const width = Math.min(0, Math.max(-window.innerWidth, left + deltaX))  // 0到一个负值之间, 左滑动：deltaX为负的left为0，右滑动：deltaX为正值left为-window.innerWidth
+        // lyricList为一个scroll组件，不能直接去访问dom,要通过$el去访问
+        this.$refs.lyricList.$el.style['transform'] = `translate3d(${width}px, 0, 0)`
+      },
+      middleTouchEnd(e) {
       },
       _pad(num, n = 2) {
         let len = num.toString().length
